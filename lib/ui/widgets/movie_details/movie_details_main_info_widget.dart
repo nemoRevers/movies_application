@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:movies_db/resources/resources.dart';
+import 'package:movies_db/Library/Widgets/Inherited/provider.dart';
+import 'package:movies_db/domain/api_client/api_client.dart';
+import 'package:movies_db/domain/entity/movie_details.dart';
 import 'package:movies_db/ui/widgets/movie_details/score_indicate_widget.dart';
+
+import 'movie_details_model.dart';
 
 class MovieDetailsMainInfoWidget extends StatelessWidget {
   const MovieDetailsMainInfoWidget({super.key});
@@ -36,15 +40,26 @@ class MovieDetailsMainInfoWidget extends StatelessWidget {
 class _TopPosterWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: const [
-        Image(image: AssetImage(AppImages.fullScreenMinions)),
-        Positioned(
+    final model = NotifierProvider.watch<MovieDetailsModel>(context);
+    final backdropPath = model?.movieDetails?.backdropPath;
+    final posterPath = model?.movieDetails?.posterPath;
+    return AspectRatio(
+      aspectRatio: 390 / 219,
+      child: Stack(
+        children: [
+          backdropPath != null
+              ? Image.network(ApiClient.imageUrl(backdropPath))
+              : const SizedBox.shrink(),
+          Positioned(
             top: 20,
             bottom: 20,
             left: 20,
-            child: Image(image: AssetImage(AppImages.minions))),
-      ],
+            child: posterPath != null
+                ? Image.network(ApiClient.imageUrl(posterPath))
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -52,20 +67,25 @@ class _TopPosterWidget extends StatelessWidget {
 class _MovieNameWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return RichText(
-      maxLines: 3,
-      textAlign: TextAlign.center,
-      text: const TextSpan(
-        children: [
-          TextSpan(
-            text: 'Миньоны: Грювитация ',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
-          ),
-          TextSpan(
-            text: ' (2022)',
-            style: TextStyle(fontWeight: FontWeight.w400, fontSize: 16),
-          ),
-        ],
+    final model = NotifierProvider.watch<MovieDetailsModel>(context);
+    dynamic year = model?.movieDetails?.releaseDate?.year.toString();
+    year = year != null ? '   ($year)' : '';
+    return Center(
+      child: RichText(
+        maxLines: 3,
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: model?.movieDetails?.title ?? '',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+            ),
+            TextSpan(
+              text: year,
+              style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -74,6 +94,10 @@ class _MovieNameWidget extends StatelessWidget {
 class _ScoreWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final movieDetails =
+        NotifierProvider.watch<MovieDetailsModel>(context)?.movieDetails;
+    double voteAverage = movieDetails?.voteAverage ?? 0.0;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -83,20 +107,20 @@ class _ScoreWidget extends StatelessWidget {
             child: Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Padding(
-                    padding: EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(8),
                     child: AspectRatio(
                       aspectRatio: 1,
                       child: ScoreIndicator(
-                          percent: 0.73,
+                          percent: voteAverage / 10,
                           textSize: 20,
                           textWeight: FontWeight.w700,
                           textColor: Colors.white),
                     ),
                   ),
-                  SizedBox(width: 2),
-                  Text(
+                  const SizedBox(width: 2),
+                  const Text(
                     'User Score',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -147,16 +171,44 @@ class _ScoreWidget extends StatelessWidget {
 class _SummeryWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final model = NotifierProvider.watch<MovieDetailsModel>(context);
+    if (model == null) return const SizedBox.shrink();
+    List<String> texts = [];
+    final releaseDate = model.movieDetails?.releaseDate;
+    if (releaseDate != null) {
+      texts.add(model.stringFromDate(releaseDate));
+    }
+    final productionCountries = model.movieDetails?.productionCountries;
+    if (productionCountries != null && productionCountries.isNotEmpty) {
+      texts.add('(${productionCountries.first.iso})');
+    }
+
+    final runtime = model.movieDetails?.runtime ?? 0;
+    final duration = Duration(minutes: runtime);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    texts.add('${hours}h ${minutes}m');
+
+    final List<Genre>? genres = model.movieDetails?.genres;
+    if (genres != null && genres.isNotEmpty) {
+      List<String> genresName = [];
+      for (Genre genre in genres) {
+        genresName.add(genre.name);
+      }
+      texts.add(genresName.join(', '));
+    }
+
     return Container(
       width: double.infinity,
       color: const Color.fromRGBO(22, 21, 25, 1.0),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Text(
-          'PG 01/07/2022 (US) семейный, мультфильм, приключения, комедия, фэнтези 1h 27m',
+          texts.join('  '),
+          // 'PG 01/07/2022 (US) семейный, мультфильм, приключения, комедия, фэнтези 1h 27m',
           maxLines: 3,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
               color: Colors.white, fontSize: 16, fontWeight: FontWeight.w400),
         ),
       ),
@@ -171,7 +223,7 @@ class _OverviewWidget extends StatelessWidget {
     return const Align(
       alignment: Alignment.centerLeft,
       child: Text(
-        'Обзор',
+        'Overview',
         style: TextStyle(
             color: Colors.white, fontSize: 16, fontWeight: FontWeight.w400),
       ),
@@ -186,9 +238,10 @@ class _DescriptionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Миллион лет миньоны искали самого великого и ужасного предводителя, пока не встретили ЕГО. Знакомьтесь - Грю. Пусть он еще очень молод, но у него в планах по-настоящему гадкие дела, которые заставят планету содрогнуться.',
-      style: TextStyle(
+    final model = NotifierProvider.watch<MovieDetailsModel>(context);
+    return Text(
+      model?.movieDetails?.overview ?? '',
+      style: const TextStyle(
           color: Colors.white, fontSize: 16, fontWeight: FontWeight.w400),
     );
   }

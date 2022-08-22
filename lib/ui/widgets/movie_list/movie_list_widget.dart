@@ -100,7 +100,7 @@ class MovieListWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(10.0),
           child: TextField(
-            // controller:,
+            onChanged: model.searchMovie,
             cursorColor: AppColors.mainDarkBlue,
             decoration: InputDecoration(
               isCollapsed: true,

@@ -59,7 +59,8 @@ class _MainScreenWidgetState extends State<MainScreenWidget> {
             ),
           ),
           NotifierProvider(
-            model: movieListModel,
+            create: () => movieListModel,
+            isManagingModel: false,
             child: const MovieListWidget(),
           ),
           const Center(

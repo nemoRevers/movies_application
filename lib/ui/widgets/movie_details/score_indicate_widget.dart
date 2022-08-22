@@ -25,7 +25,7 @@ class ScoreIndicator extends StatelessWidget {
               percent: percent,
               fillColor: Colors.black,
               lineColor: Colors.green,
-              freeColor: Colors.yellowAccent,
+              freeColor: Colors.yellow.withOpacity(0.4),
             ),
           ),
           Center(
